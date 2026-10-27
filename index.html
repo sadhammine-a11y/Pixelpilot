@@ -66,6 +66,75 @@ upscale:{n:'Upscale Image',i:'🔍',d:'Enlarge images 2×, 3× or 4×.',f:[S('s'
 meme:{n:'Meme Generator',i:'😂',d:'Add top and bottom captions.',f:[N('top','Top text','WHEN YOU FINISH'),N('bot','Bottom text','THE PROJECT')],p:function(im,o){return base(im,0,0,function(x,c){x.drawImage(im,0,0);var s=c.width/9;x.font='900 '+s+'px Impact,"Arial Black",sans-serif';x.textAlign='center';x.fillStyle='#fff';x.strokeStyle='#000';x.lineWidth=s/8;x.lineJoin='round';[[o.top,s*1.1],[o.bot,c.height-s*.4]].forEach(function(t){var u=t[0].toUpperCase();x.strokeText(u,c.width/2,t[1],c.width*.95);x.fillText(u,c.width/2,t[1],c.width*.95)})})},mime:function(){return 'image/png'},sfx:'-meme'},
 blur:{n:'Blur Area',i:'🫥',d:'Hide faces or details in a region.',f:[R('x','Left %',0,95,30),R('y','Top %',0,95,30),R('w','Width %',5,100,40),R('h','Height %',5,100,40),R('a','Blur strength',2,40,18)],p:function(im,o){return base(im,0,0,function(x,c){x.drawImage(im,0,0);x.save();x.beginPath();x.rect(c.width*o.x/100,c.height*o.y/100,c.width*o.w/100,c.height*o.h/100);x.clip();x.filter='blur('+(o.a*c.width/800)+'px)';x.drawImage(im,0,0);x.restore()})},mime:function(){return 'image/png'},sfx:'-blurred'}
 };
+T.compress={n:'Compress Image',i:'🗜️',d:'Choose a compression level and shrink file size.',f:[S('lvl','Compression level',['Recommended','Extreme','Less']),S('fmt','Output',['jpeg','webp'])],p:function(im){return base(im)},mime:function(o){return 'image/'+o.fmt},q:function(o){return {Extreme:.4,Recommended:.7,Less:.9}[o.lvl]},sfx:'-compressed'};
+T.resize={n:'Resize Image',i:'📐',d:'Resize by exact pixels or by percentage.',f:[S('by','Resize by',['pixels','percent']),{id:'w',t:'number',l:'Width px (0 = auto)',v:800},{id:'h',t:'number',l:'Height px (0 = auto)',v:0},S('lock','Aspect ratio',['keep ratio','stretch']),R('pct','Percent (if by percent)',10,300,50)],p:function(im,o){var w,h;if(o.by=='percent'){w=im.width*o.pct/100;h=im.height*o.pct/100}else{w=o.w;h=o.h;if(!w&&!h){w=im.width;h=im.height}else if(o.lock=='keep ratio'||!w||!h){if(w)h=im.height*w/im.width;else w=im.width*h/im.height}}return base(im,w,h)},mime:function(){return 'image/png'},sfx:'-resized'};
+T.tojpg={n:'Convert to JPG',i:'🔄',d:'PNG, WebP, GIF, BMP, SVG → JPG.',f:[R('q','Quality',50,100,92),S('bg','Background for transparent areas',['white','black','gray'])],p:function(im){return base(im)},mime:function(){return 'image/jpeg'},q:function(o){return o.q/100},sfx:''};
+T.crop={n:'Crop Image',i:'✂️',d:'Drag on the image to select the area to keep.',ed:cropEd};
+T.editor={n:'Photo Editor',i:'🎨',d:'Filters, adjustments, text, stickers, frames and rotation.',ed:editEd};
+T.rmbg={n:'Remove Background',i:'🪄',d:'Make a plain background transparent.',ed:bgEd};
+function pick(t,start){
+ app.innerHTML='<a class="back" href="#home">← All tools</a><h1 style="margin-top:12px">'+t.n+'</h1><p class="sub">'+t.d+'</p><div class="drop" id="drop"><button class="btn" id="pick">Select image</button><p class="hint">or drop image here</p><input type="file" id="fi" accept="image/*" hidden></div><div id="ws"></div>';
+ var d=document.getElementById('drop'),fi=document.getElementById('fi');
+ function take(f){if(!f||!/^image\//.test(f.type))return;load(URL.createObjectURL(f)).then(function(im){d.classList.add('hidden');start(document.getElementById('ws'),im,f)})}
+ document.getElementById('pick').onclick=function(){fi.click()};fi.onchange=function(){take(fi.files[0])};
+ d.ondragover=function(e){e.preventDefault();d.classList.add('over')};d.ondragleave=function(){d.classList.remove('over')};d.ondrop=function(e){e.preventDefault();d.classList.remove('over');take(e.dataTransfer.files[0])};
+}
+function save(c,name,m,q){c.toBlob(function(b){var a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=name;a.click()},m,q)}
+function bn(f){return f.name.replace(/\.[^.]+$/,'')}
+function cropEd(ws,im,f){
+ var r={x:0,y:0,w:im.width,h:im.height},mode=null,a,off,asp=0;
+ ws.innerHTML='<div class="opts"><label>Aspect ratio<select id="as"><option value="0">Free</option><option value="1">1:1</option><option value="1.3333">4:3</option><option value="1.7778">16:9</option><option value="0.75">3:4</option></select></label><label>Selection<span id="rd"></span></label></div><div style="margin-top:16px;text-align:center"><canvas id="cv" style="max-width:100%;touch-action:none;cursor:crosshair;border-radius:8px"></canvas></div><div class="bar"><button class="btn" id="ap">Crop and download</button><button class="btn alt" id="rs">Reset</button></div>';
+ var c=ws.querySelector('#cv'),x=c.getContext('2d');c.width=im.width;c.height=im.height;
+ function draw(){x.drawImage(im,0,0);x.fillStyle='rgba(0,0,0,.55)';x.fillRect(0,0,c.width,r.y);x.fillRect(0,r.y+r.h,c.width,c.height);x.fillRect(0,r.y,r.x,r.h);x.fillRect(r.x+r.w,r.y,c.width,r.h);x.strokeStyle='#fff';x.lineWidth=Math.max(2,c.width/400);x.strokeRect(r.x,r.y,r.w,r.h);x.beginPath();for(var i=1;i<3;i++){x.moveTo(r.x+r.w*i/3,r.y);x.lineTo(r.x+r.w*i/3,r.y+r.h);x.moveTo(r.x,r.y+r.h*i/3);x.lineTo(r.x+r.w,r.y+r.h*i/3)}x.globalAlpha=.5;x.stroke();x.globalAlpha=1;ws.querySelector('#rd').textContent=Math.round(r.w)+' × '+Math.round(r.h)+' px'}
+ function pt(e){var b=c.getBoundingClientRect();return {x:Math.min(c.width,Math.max(0,(e.clientX-b.left)*c.width/b.width)),y:Math.min(c.height,Math.max(0,(e.clientY-b.top)*c.height/b.height))}}
+ c.onpointerdown=function(e){c.setPointerCapture(e.pointerId);var p=pt(e);if(p.x>r.x&&p.x<r.x+r.w&&p.y>r.y&&p.y<r.y+r.h&&(r.w<c.width||r.h<c.height)){mode='m';off={x:p.x-r.x,y:p.y-r.y}}else{mode='n';a=p}};
+ c.onpointermove=function(e){if(!mode)return;var p=pt(e);if(mode=='m'){r.x=Math.min(c.width-r.w,Math.max(0,p.x-off.x));r.y=Math.min(c.height-r.h,Math.max(0,p.y-off.y))}else{var w=Math.abs(p.x-a.x),h=Math.abs(p.y-a.y),sx=p.x<a.x?-1:1,sy=p.y<a.y?-1:1;if(asp){h=w/asp;var mh=sy<0?a.y:c.height-a.y;if(h>mh){h=mh;w=h*asp}}r.w=w;r.h=h;r.x=sx<0?a.x-w:a.x;r.y=sy<0?a.y-h:a.y}draw()};
+ c.onpointerup=function(){mode=null};
+ ws.querySelector('#as').onchange=function(){asp=+this.value;if(asp){r.w=Math.min(im.width,im.height*asp);r.h=r.w/asp;r.x=(im.width-r.w)/2;r.y=(im.height-r.h)/2;draw()}};
+ ws.querySelector('#rs').onclick=function(){r={x:0,y:0,w:im.width,h:im.height};draw()};
+ ws.querySelector('#ap').onclick=function(){var o=cv(r.w,r.h);o.getContext('2d').drawImage(im,r.x,r.y,r.w,r.h,0,0,o.width,o.height);save(o,bn(f)+'-cropped.png','image/png')};
+ draw();
+}
+function editEd(ws,im,f){
+ var D={br:100,ct:100,sa:100,hue:0,bl:0,gr:0,se:0,rot:0,fh:0,fv:0,txt:'',tsz:8,tcol:'#ffffff',tx:50,ty:50,emo:'',esz:14,ex:50,ey:50,fw:0,fc:'#ffffff'},s=Object.assign({},D);
+ var adj=['br','ct','sa','hue','bl','gr','se'];
+ var sliders=[['br','Brightness',30,200],['ct','Contrast',30,200],['sa','Saturation',0,300],['hue','Hue',0,360],['gr','Grayscale',0,100],['se','Sepia',0,100],['bl','Blur',0,10],['tsz','Text size',2,25],['tx','Text X %',0,100],['ty','Text Y %',0,100],['esz','Sticker size',4,50],['ex','Sticker X %',0,100],['ey','Sticker Y %',0,100],['fw','Frame width',0,15]];
+ var pre={Original:{},'B&W':{gr:100,ct:110},Vintage:{se:70,ct:90,br:105},Warm:{se:30,sa:130,br:105},Vivid:{sa:180,ct:115},Fade:{ct:80,br:115,sa:80},Dramatic:{ct:150,sa:80,br:90}};
+ var h='<div style="margin-top:16px;text-align:center"><canvas id="cv" style="max-width:100%;max-height:70vh;border-radius:8px"></canvas></div><div class="bar">';
+ Object.keys(pre).forEach(function(n){h+='<button class="btn alt" data-p="'+n+'">'+n+'</button>'});
+ h+='<button class="btn alt" data-r="270">↺ Rotate</button><button class="btn alt" data-r="90">↻ Rotate</button><button class="btn alt" data-f="fh">⇋ Flip</button><button class="btn alt" data-f="fv">⇅ Flip</button></div><div class="opts">';
+ sliders.forEach(function(q){h+='<label>'+q[1]+'<input type="range" data-k="'+q[0]+'" min="'+q[2]+'" max="'+q[3]+'" value="'+D[q[0]]+'"></label>'});
+ h+='<label>Text<input type="text" data-k="txt" placeholder="Add text"></label><label>Text color<input type="color" data-k="tcol" value="#ffffff"></label><label>Sticker<select data-k="emo"><option value="">None</option>'+['😀','😎','❤️','⭐','🔥','🎉','🌸','👑'].map(function(e){return '<option>'+e+'</option>'}).join('')+'</select></label><label>Frame color<input type="color" data-k="fc" value="#ffffff"></label></div><div class="bar"><button class="btn" id="dp">Download PNG</button><button class="btn alt" id="dj">Download JPG</button><button class="btn alt" id="rs">Reset all</button></div>';
+ ws.innerHTML=h;
+ var c=ws.querySelector('#cv'),x=c.getContext('2d');
+ function render(){var sw=s.rot%180!=0,iw=sw?im.height:im.width,ih=sw?im.width:im.height,fw=Math.round(Math.max(iw,ih)*s.fw/100);c.width=iw+2*fw;c.height=ih+2*fw;x.fillStyle=s.fc;x.fillRect(0,0,c.width,c.height);x.save();x.translate(c.width/2,c.height/2);x.rotate(s.rot*Math.PI/180);x.scale(s.fh?-1:1,s.fv?-1:1);x.filter='brightness('+s.br+'%) contrast('+s.ct+'%) saturate('+s.sa+'%) hue-rotate('+s.hue+'deg) grayscale('+s.gr+'%) sepia('+s.se+'%) blur('+s.bl+'px)';x.drawImage(im,-im.width/2,-im.height/2);x.restore();x.filter='none';x.textAlign='center';x.textBaseline='middle';if(s.txt){var z=iw*s.tsz/100;x.font='bold '+z+'px sans-serif';x.lineWidth=z/10;x.strokeStyle='rgba(0,0,0,.55)';x.strokeText(s.txt,fw+iw*s.tx/100,fw+ih*s.ty/100);x.fillStyle=s.tcol;x.fillText(s.txt,fw+iw*s.tx/100,fw+ih*s.ty/100)}if(s.emo){x.font=(iw*s.esz/100)+'px sans-serif';x.fillText(s.emo,fw+iw*s.ex/100,fw+ih*s.ey/100)}}
+ function sync(){ws.querySelectorAll('[data-k]').forEach(function(e){e.value=s[e.dataset.k]})}
+ ws.querySelectorAll('[data-k]').forEach(function(e){e.oninput=function(){s[e.dataset.k]=e.type=='range'?+e.value:e.value;render()}});
+ ws.querySelectorAll('[data-p]').forEach(function(b){b.onclick=function(){adj.forEach(function(k){s[k]=pre[b.dataset.p][k]!=null?pre[b.dataset.p][k]:D[k]});sync();render()}});
+ ws.querySelectorAll('[data-r]').forEach(function(b){b.onclick=function(){s.rot=(s.rot+ +b.dataset.r)%360;render()}});
+ ws.querySelectorAll('[data-f]').forEach(function(b){b.onclick=function(){s[b.dataset.f]=s[b.dataset.f]?0:1;render()}});
+ ws.querySelector('#rs').onclick=function(){s=Object.assign({},D);sync();render()};
+ ws.querySelector('#dp').onclick=function(){save(c,bn(f)+'-edited.png','image/png')};
+ ws.querySelector('#dj').onclick=function(){var w=cv(c.width,c.height),q=w.getContext('2d');q.fillStyle='#fff';q.fillRect(0,0,w.width,w.height);q.drawImage(c,0,0);save(w,bn(f)+'-edited.jpg','image/jpeg',.92)};
+ render();
+}
+function bgEd(ws,im,f){
+ var k=Math.min(1,2400/Math.max(im.width,im.height)),W=Math.round(im.width*k),H=Math.round(im.height*k);
+ ws.innerHTML='<div class="opts"><label>Tolerance <span id="tv">30</span><input id="tol" type="range" min="2" max="90" value="30"></label><label>Remove<select id="md"><option value="c">Background connected to edges</option><option value="a">This color everywhere</option></select></label><label>Picked color<span id="sw" style="display:block;height:32px;border:1px solid var(--border);border-radius:6px"></span></label></div><p class="hint" style="text-align:center">Click the background on the image to choose its color. Works best on plain or evenly colored backgrounds.</p><div style="text-align:center;margin-top:12px"><canvas id="cv" style="max-width:100%;max-height:70vh;cursor:crosshair;border-radius:8px;background:repeating-conic-gradient(#bbb 0 25%,#fff 0 50%) 0 0/20px 20px"></canvas></div><div class="bar"><button class="btn" id="dl">Download PNG</button></div>';
+ var c=ws.querySelector('#cv'),x=c.getContext('2d',{willReadFrequently:true}),tol=ws.querySelector('#tol'),md=ws.querySelector('#md'),sw=ws.querySelector('#sw');
+ c.width=W;c.height=H;x.drawImage(im,0,0,W,H);
+ var orig=x.getImageData(0,0,W,H),o=orig.data,key=[o[0],o[1],o[2]];
+ function paint(){sw.style.background='rgb('+key.join(',')+')'}
+ function run(){var out=x.createImageData(W,H),d=out.data,t=+tol.value,soft=t*1.25,del=new Uint8Array(W*H),p,i;d.set(o);
+  function dist(j){var a=o[j]-key[0],b=o[j+1]-key[1],g=o[j+2]-key[2];return Math.sqrt(a*a+b*b+g*g)/4.4167}
+  if(md.value=='a'){for(p=0;p<W*H;p++)if(dist(p*4)<t)del[p]=1}else{var st=[];var push=function(q){if(!del[q]&&dist(q*4)<t){del[q]=1;st.push(q)}};for(i=0;i<W;i++){push(i);push((H-1)*W+i)}for(i=0;i<H;i++){push(i*W);push(i*W+W-1)}while(st.length){var q=st.pop(),cx=q%W;if(cx>0)push(q-1);if(cx<W-1)push(q+1);if(q>=W)push(q-W);if(q<W*H-W)push(q+W)}}
+  for(p=0;p<W*H;p++){if(del[p]){d[p*4+3]=0;continue}var dd=dist(p*4);if(dd<soft&&((p%W>0&&del[p-1])||(p%W<W-1&&del[p+1])||(p>=W&&del[p-W])||(p<W*H-W&&del[p+W])))d[p*4+3]=255*(dd-t)/(soft-t)}
+  x.putImageData(out,0,0);ws.querySelector('#tv').textContent=t}
+ tol.oninput=function(){requestAnimationFrame(run)};md.onchange=run;
+ c.onclick=function(e){var b=c.getBoundingClientRect(),px=Math.floor((e.clientX-b.left)*W/b.width),py=Math.floor((e.clientY-b.top)*H/b.height),j=(py*W+px)*4;key=[o[j],o[j+1],o[j+2]];paint();run()};
+ ws.querySelector('#dl').onclick=function(){save(c,bn(f)+'-no-bg.png','image/png')};
+ paint();run();
+}
 var app=document.getElementById('app'),files=[],cur=null;
 function fmt(b){return b>1048576?(b/1048576).toFixed(2)+' MB':Math.max(1,Math.round(b/1024))+' KB'}
 function route(){var k=location.hash.slice(1);files.forEach(function(f){URL.revokeObjectURL(f.url);if(f.out)URL.revokeObjectURL(f.out.url)});files=[];if(T[k]){cur=k;tool()}else home()}
@@ -75,7 +144,7 @@ function home(){
  app.innerHTML=h+'</div><p class="hint" style="text-align:center;margin-top:30px">Files are processed on your device and never uploaded.</p>';
 }
 function tool(){
- var t=T[cur],h='<a class="back" href="#home">← All tools</a><h1 style="margin-top:12px">'+t.n+'</h1><p class="sub">'+t.d+'</p><div class="drop" id="drop"><button class="btn" id="pick">Select images</button><p class="hint">or drop images here</p><input type="file" id="fi" accept="image/*" multiple hidden></div><div class="opts" id="opts">';
+ var t=T[cur];if(t.ed)return pick(t,t.ed);var h='<a class="back" href="#home">← All tools</a><h1 style="margin-top:12px">'+t.n+'</h1><p class="sub">'+t.d+'</p><div class="drop" id="drop"><button class="btn" id="pick">Select images</button><p class="hint">or drop images here</p><input type="file" id="fi" accept="image/*" multiple hidden></div><div class="opts" id="opts">';
  t.f.forEach(function(f){h+='<label>'+f.l+(f.t=='range'?' <span id="v_'+f.id+'">'+f.v+'</span>':'')+'<input id="o_'+f.id+'" '+(f.t=='range'?'type="range" min="'+f.min+'" max="'+f.max+'"':f.t=='number'?'type="number" min="0"':f.t=='select'?'':'type="text"')+' value="'+f.v+'">'+'</label>'});
  h+='</div><div class="list" id="list"></div><div class="bar hidden" id="bar"><button class="btn" id="go">'+t.n+'</button><button class="btn alt hidden" id="all">Download all</button></div>';
  app.innerHTML=h;
@@ -110,7 +179,7 @@ function run(){
  Promise.all(files.map(function(f){
   return load(f.url).then(function(im){
    var c=t.p(im,o),m=t.mime(o);
-   if(m=='image/jpeg'){var w=cv(c.width,c.height),x=w.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,w.width,w.height);x.drawImage(c,0,0);c=w}
+   if(m=='image/jpeg'){var w=cv(c.width,c.height),x=w.getContext('2d');x.fillStyle=o.bg||'#fff';x.fillRect(0,0,w.width,w.height);x.drawImage(c,0,0);c=w}
    return new Promise(function(r){c.toBlob(function(bl){
     if(f.out)URL.revokeObjectURL(f.out.url);
     var ext=m.split('/')[1].replace('jpeg','jpg');
