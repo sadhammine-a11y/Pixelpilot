@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>PixelPilot – Free Online Image Tools</title>
+<style>
+:root{--bg:#f4f6fb;--card:#fff;--text:#1f2433;--muted:#667;--accent:#4f46e5;--border:#dde1ec;--drop:#f8f9fd;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14151c;--card:#1e2029;--text:#eceef6;--muted:#9aa0b4;--accent:#818cf8;--border:#363949;--drop:#252733}}
+:root[data-theme="dark"]{--bg:#14151c;--card:#1e2029;--text:#eceef6;--muted:#9aa0b4;--accent:#818cf8;--border:#363949;--drop:#252733}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{display:flex;align-items:center;justify-content:space-between;padding:14px 24px;background:var(--card);border-bottom:1px solid var(--border)}
+header a{color:var(--text);text-decoration:none;font-weight:800;font-size:1.25rem}
+header b{color:var(--accent)}
+main{max-width:1000px;margin:0 auto;padding:32px 16px 60px}
+h1{text-align:center;font-size:clamp(1.6rem,4vw,2.4rem);margin:0 0 8px}
+.sub{text-align:center;color:var(--muted);margin:0 0 28px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px}
+.tool{display:block;background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px;text-decoration:none;color:var(--text);transition:.15s}
+.tool:hover{transform:translateY(-3px);border-color:var(--accent)}
+.tool .i{font-size:2rem}
+.tool h3{margin:8px 0 4px;font-size:1.05rem}
+.tool p{margin:0;color:var(--muted);font-size:.88rem}
+.drop{background:var(--drop);border:2px dashed var(--border);border-radius:14px;padding:36px 16px;text-align:center}
+.drop.over{border-color:var(--accent)}
+.btn{background:var(--accent);color:#fff;border:0;border-radius:10px;padding:13px 26px;font-size:1rem;font-weight:600;cursor:pointer}
+.btn:disabled{opacity:.5}
+.btn.alt{background:transparent;color:var(--text);border:1px solid var(--border)}
+.hint{color:var(--muted);margin:10px 0 0;font-size:.9rem}
+.opts{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px;margin-top:20px;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
+.opts label{display:flex;flex-direction:column;gap:6px;font-size:.88rem;font-weight:600}
+.opts input,.opts select{padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--drop);color:var(--text);font:inherit;font-weight:400}
+.list{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:14px;margin-top:20px}
+.item{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:10px;text-align:center;position:relative}
+.item img{width:100%;height:120px;object-fit:contain;background:var(--drop);border-radius:6px}
+.nm{font-size:.8rem;margin:8px 0 2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sz{font-size:.75rem;color:var(--muted)}
+.x{position:absolute;top:6px;right:6px;width:24px;height:24px;border-radius:50%;border:0;background:rgba(0,0,0,.6);color:#fff;cursor:pointer}
+.dl{display:inline-block;margin-top:6px;font-size:.85rem;color:var(--accent);font-weight:600;text-decoration:none}
+.bar{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:24px}
+.hidden{display:none}
+.back{color:var(--accent);text-decoration:none;font-weight:600}
+</style>
+</head>
+<body>
+<header><a href="#home">Pixel<b>Pilot</b></a><span style="color:var(--muted);font-size:.85rem">Free · Private · In your browser</span></header>
+<main id="app"></main>
+<script>
+(function(){
+var cv=function(w,h){var c=document.createElement('canvas');c.width=Math.max(1,Math.round(w));c.height=Math.max(1,Math.round(h));return c};
+var R=function(id,l,min,max,v){return {id:id,t:'range',l:l,min:min,max:max,v:v}};
+var S=function(id,l,o,v){return {id:id,t:'select',l:l,o:o,v:v||o[0]}};
+var N=function(id,l,v){return {id:id,t:'text',l:l,v:v}};
+function base(im,w,h,fn){var c=cv(w||im.width,h||im.height),x=c.getContext('2d');x.imageSmoothingQuality='high';if(fn)fn(x,c);else x.drawImage(im,0,0,c.width,c.height);return c}
+var T={
+compress:{n:'Compress Image',i:'🗜️',d:'Shrink file size while keeping quality.',f:[R('q','Quality',10,100,70),S('fmt','Output',['jpeg','webp'])],p:function(im,o){return base(im)},mime:function(o){return 'image/'+o.fmt},q:function(o){return o.q/100},sfx:'-compressed'},
+resize:{n:'Resize Image',i:'📐',d:'Scale by percent or exact width.',f:[R('pct','Scale %',10,300,50),{id:'w',t:'number',l:'Or width in px (0 = use %)',v:0}],p:function(im,o){var s=o.w>0?o.w/im.width:o.pct/100;return base(im,im.width*s,im.height*s)},mime:function(){return 'image/png'},sfx:'-resized'},
+crop:{n:'Crop Image',i:'✂️',d:'Trim edges by percentage.',f:[R('l','Trim left %',0,45,0),R('t','Trim top %',0,45,0),R('r','Trim right %',0,45,0),R('b','Trim bottom %',0,45,0)],p:function(im,o){var x=im.width*o.l/100,y=im.height*o.t/100,w=im.width*(1-(+o.l+ +o.r)/100),h=im.height*(1-(+o.t+ +o.b)/100);return base(im,w,h,function(c){c.drawImage(im,x,y,w,h,0,0,w,h)})},mime:function(){return 'image/png'},sfx:'-cropped'},
+tojpg:{n:'Convert to JPG',i:'🔄',d:'PNG, WebP, GIF, BMP → JPG.',f:[R('q','Quality',50,100,92)],p:function(im){return base(im)},mime:function(){return 'image/jpeg'},q:function(o){return o.q/100},sfx:''},
+fromjpg:{n:'Convert from JPG',i:'🖼️',d:'JPG → PNG or WebP.',f:[S('fmt','Convert to',['png','webp'])],p:function(im){return base(im)},mime:function(o){return 'image/'+o.fmt},sfx:''},
+rotate:{n:'Rotate Image',i:'🔃',d:'Rotate and flip your photos.',f:[S('a','Rotate',['90','180','270']),S('fl','Flip',['none','horizontal','vertical'])],p:function(im,o){var a=+o.a,sw=a!=180,c=cv(sw?im.height:im.width,sw?im.width:im.height),x=c.getContext('2d');x.translate(c.width/2,c.height/2);x.rotate(a*Math.PI/180);x.scale(o.fl=='horizontal'?-1:1,o.fl=='vertical'?-1:1);x.drawImage(im,-im.width/2,-im.height/2);return c},mime:function(){return 'image/png'},sfx:'-rotated'},
+watermark:{n:'Watermark Image',i:'💧',d:'Stamp text over your images.',f:[N('txt','Text','© PixelPilot'),R('sz','Size %',2,30,8),R('op','Opacity %',10,100,60),S('pos','Position',['bottom-right','bottom-left','top-left','top-right','center'])],p:function(im,o){return base(im,0,0,function(x,c){x.drawImage(im,0,0);var s=c.width*o.sz/100,m=s*.6;x.font='bold '+s+'px sans-serif';x.globalAlpha=o.op/100;x.fillStyle='#fff';x.strokeStyle='rgba(0,0,0,.6)';x.lineWidth=s/12;var w=x.measureText(o.txt).width,p=o.pos,px=p.indexOf('left')>-1?m:p.indexOf('right')>-1?c.width-w-m:(c.width-w)/2,py=p.indexOf('top')>-1?s+m/2:p.indexOf('bottom')>-1?c.height-m:(c.height+s)/2;x.strokeText(o.txt,px,py);x.fillText(o.txt,px,py)})},mime:function(){return 'image/png'},sfx:'-watermarked'},
+editor:{n:'Photo Editor',i:'🎨',d:'Brightness, contrast, filters.',f:[R('br','Brightness %',30,200,100),R('ct','Contrast %',30,200,100),R('sa','Saturation %',0,300,100),R('gr','Grayscale %',0,100,0),R('se','Sepia %',0,100,0),R('bl','Blur px',0,10,0)],p:function(im,o){return base(im,0,0,function(x){x.filter='brightness('+o.br+'%) contrast('+o.ct+'%) saturate('+o.sa+'%) grayscale('+o.gr+'%) sepia('+o.se+'%) blur('+o.bl+'px)';x.drawImage(im,0,0)})},mime:function(){return 'image/png'},sfx:'-edited'},
+upscale:{n:'Upscale Image',i:'🔍',d:'Enlarge images 2×, 3× or 4×.',f:[S('s','Scale',['2','3','4'])],p:function(im,o){var s=Math.min(+o.s,8000/Math.max(im.width,im.height));return base(im,im.width*s,im.height*s)},mime:function(){return 'image/png'},sfx:'-upscaled'},
+meme:{n:'Meme Generator',i:'😂',d:'Add top and bottom captions.',f:[N('top','Top text','WHEN YOU FINISH'),N('bot','Bottom text','THE PROJECT')],p:function(im,o){return base(im,0,0,function(x,c){x.drawImage(im,0,0);var s=c.width/9;x.font='900 '+s+'px Impact,"Arial Black",sans-serif';x.textAlign='center';x.fillStyle='#fff';x.strokeStyle='#000';x.lineWidth=s/8;x.lineJoin='round';[[o.top,s*1.1],[o.bot,c.height-s*.4]].forEach(function(t){var u=t[0].toUpperCase();x.strokeText(u,c.width/2,t[1],c.width*.95);x.fillText(u,c.width/2,t[1],c.width*.95)})})},mime:function(){return 'image/png'},sfx:'-meme'},
+blur:{n:'Blur Area',i:'🫥',d:'Hide faces or details in a region.',f:[R('x','Left %',0,95,30),R('y','Top %',0,95,30),R('w','Width %',5,100,40),R('h','Height %',5,100,40),R('a','Blur strength',2,40,18)],p:function(im,o){return base(im,0,0,function(x,c){x.drawImage(im,0,0);x.save();x.beginPath();x.rect(c.width*o.x/100,c.height*o.y/100,c.width*o.w/100,c.height*o.h/100);x.clip();x.filter='blur('+(o.a*c.width/800)+'px)';x.drawImage(im,0,0);x.restore()})},mime:function(){return 'image/png'},sfx:'-blurred'}
+};
+var app=document.getElementById('app'),files=[],cur=null;
+function fmt(b){return b>1048576?(b/1048576).toFixed(2)+' MB':Math.max(1,Math.round(b/1024))+' KB'}
+function route(){var k=location.hash.slice(1);files.forEach(function(f){URL.revokeObjectURL(f.url);if(f.out)URL.revokeObjectURL(f.out.url)});files=[];if(T[k]){cur=k;tool()}else home()}
+function home(){
+ var h='<h1>Every image tool you need</h1><p class="sub">Compress, resize, crop, convert, edit and more — free, fast and 100% private.</p><div class="grid">';
+ Object.keys(T).forEach(function(k){h+='<a class="tool" href="#'+k+'"><div class="i">'+T[k].i+'</div><h3>'+T[k].n+'</h3><p>'+T[k].d+'</p></a>'});
+ app.innerHTML=h+'</div><p class="hint" style="text-align:center;margin-top:30px">Files are processed on your device and never uploaded.</p>';
+}
+function tool(){
+ var t=T[cur],h='<a class="back" href="#home">← All tools</a><h1 style="margin-top:12px">'+t.n+'</h1><p class="sub">'+t.d+'</p><div class="drop" id="drop"><button class="btn" id="pick">Select images</button><p class="hint">or drop images here</p><input type="file" id="fi" accept="image/*" multiple hidden></div><div class="opts" id="opts">';
+ t.f.forEach(function(f){h+='<label>'+f.l+(f.t=='range'?' <span id="v_'+f.id+'">'+f.v+'</span>':'')+'<input id="o_'+f.id+'" '+(f.t=='range'?'type="range" min="'+f.min+'" max="'+f.max+'"':f.t=='number'?'type="number" min="0"':f.t=='select'?'':'type="text"')+' value="'+f.v+'">'+'</label>'});
+ h+='</div><div class="list" id="list"></div><div class="bar hidden" id="bar"><button class="btn" id="go">'+t.n+'</button><button class="btn alt hidden" id="all">Download all</button></div>';
+ app.innerHTML=h;
+ t.f.forEach(function(f){var el=document.getElementById('o_'+f.id);if(f.t=='select'){var s=document.createElement('select');s.id=el.id;f.o.forEach(function(o){var op=document.createElement('option');op.textContent=o;op.value=o;if(o==f.v)op.selected=true;s.appendChild(op)});el.replaceWith(s)}else if(f.t=='range')el.oninput=function(){document.getElementById('v_'+f.id).textContent=el.value}});
+ var d=document.getElementById('drop'),fi=document.getElementById('fi');
+ document.getElementById('pick').onclick=function(){fi.click()};
+ fi.onchange=function(){add(fi.files);fi.value=''};
+ d.ondragover=function(e){e.preventDefault();d.classList.add('over')};d.ondragleave=function(){d.classList.remove('over')};
+ d.ondrop=function(e){e.preventDefault();d.classList.remove('over');add(e.dataTransfer.files)};
+ document.getElementById('go').onclick=run;
+ document.getElementById('all').onclick=function(){files.forEach(function(f,i){setTimeout(function(){var a=document.createElement('a');a.href=f.out.url;a.download=f.out.name;document.body.appendChild(a);a.click();a.remove()},i*300)})};
+}
+function add(fl){Array.prototype.forEach.call(fl,function(f){if(/^image\//.test(f.type))files.push({file:f,url:URL.createObjectURL(f),out:null})});draw()}
+function draw(){
+ var l=document.getElementById('list');l.innerHTML='';
+ files.forEach(function(f,i){
+  var d=document.createElement('div');d.className='item';
+  var x=document.createElement('button');x.className='x';x.textContent='×';x.onclick=function(){files.splice(i,1);draw()};
+  var im=document.createElement('img');im.src=f.out?f.out.url:f.url;
+  var n=document.createElement('div');n.className='nm';n.textContent=f.out?f.out.name:f.file.name;
+  var s=document.createElement('div');s.className='sz';s.textContent=f.out?fmt(f.file.size)+' → '+fmt(f.out.blob.size):fmt(f.file.size);
+  d.append(x,im,n,s);
+  if(f.out){var a=document.createElement('a');a.className='dl';a.textContent='Download';a.href=f.out.url;a.download=f.out.name;d.appendChild(a)}
+  l.appendChild(d)});
+ document.getElementById('bar').classList.toggle('hidden',!files.length);
+ document.getElementById('all').classList.toggle('hidden',!(files.length&&files.every(function(f){return f.out})));
+}
+function load(u){return new Promise(function(r,j){var i=new Image();i.onload=function(){r(i)};i.onerror=j;i.src=u})}
+function run(){
+ var t=T[cur],o={};t.f.forEach(function(f){var v=document.getElementById('o_'+f.id).value;o[f.id]=(f.t=='range'||f.t=='number')?+v:v});
+ var b=document.getElementById('go');b.disabled=true;b.textContent='Working…';
+ Promise.all(files.map(function(f){
+  return load(f.url).then(function(im){
+   var c=t.p(im,o),m=t.mime(o);
+   if(m=='image/jpeg'){var w=cv(c.width,c.height),x=w.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,w.width,w.height);x.drawImage(c,0,0);c=w}
+   return new Promise(function(r){c.toBlob(function(bl){
+    if(f.out)URL.revokeObjectURL(f.out.url);
+    var ext=m.split('/')[1].replace('jpeg','jpg');
+    f.out={blob:bl,url:URL.createObjectURL(bl),name:f.file.name.replace(/\.[^.]+$/,'')+(t.sfx||'')+'.'+ext};r()},m,t.q?t.q(o):undefined)})
+  }).catch(function(){})
+ })).then(function(){b.disabled=false;b.textContent=t.n;draw()});
+}
+window.addEventListener('hashchange',route);route();
+})();
+</script>
+</body>
+</html>
